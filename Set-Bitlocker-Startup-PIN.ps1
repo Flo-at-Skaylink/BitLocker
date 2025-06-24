@@ -83,7 +83,7 @@ function Show-PinInputForm {
 
     # Logo
     $logoBox = New-Object System.Windows.Forms.PictureBox
-    $logoBox.Size = New-Object System.Drawing.Size(100, 50)
+    $logoBox.Size = New-Object System.Drawing.Size(200, 100)
     $logoBox.Location = New-Object System.Drawing.Point(20, 20)
     $logoBox.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::Zoom
     $logoPath = Join-Path $PSScriptRoot "Company_logo.png"
@@ -135,7 +135,6 @@ function Show-PinInputForm {
     $cancelButton.Size = New-Object System.Drawing.Size(100, 30)
     $cancelButton.Location = New-Object System.Drawing.Point(140, 260)
 
-
     # Error Label
     $errorLabel = New-Object System.Windows.Forms.Label
     $errorLabel.ForeColor = [System.Drawing.Color]::Red
@@ -161,7 +160,7 @@ function Show-PinInputForm {
         } elseif ($enteredPin -ne $confirmedPin) {
             $errorLabel.Text = "PINs do not match. Please try again."
         } else {
-            $errorLabel.Text = "PIN must be at least $minPinLength digits long and contain only numbers."
+            $errorLabel.Text = "PIN must be at least $minPinLength digits long. Please try again."
         }
     })
 
@@ -180,11 +179,15 @@ Try {
 
     # Read the current minimum PIN length from the registry
     $minPinLength = if (Test-Path $Bitlockersettings) {
-        Get-ItemProperty -Path $Bitlockersettings -Name "MinimumPinLength" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty MinimumPinLength
+        Get-ItemProperty -Path $Bitlockersettings -Name "MinimumPIN" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty MinimumPIN
+        Write-Log "Minimum PIN length read from registry: $minPinLength"
     } else {
         8  # Default minimum PIN length if not set
+        Write-Log "Registry path for BitLocker settings not found. Using default minimum PIN length: $minPinLength"
     }
 
+    # Read the current BitLocker status
+    Write-Log "Checking BitLocker status..."
     $osVolume = Get-BitLockerVolume | Where-Object { $_.VolumeType -eq 'OperatingSystem' }
 
     # Show PIN input form and get PIN from user
