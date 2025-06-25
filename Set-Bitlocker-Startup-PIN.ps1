@@ -1,10 +1,10 @@
 <#
+
 .SYNOPSIS
     This script sets up BitLocker with a user-defined PIN on the operating system volume.
 
 .DESCRIPTION
-    The script creates a directory for BitLocker logs, prompts the user to set a BitLocker startup PIN through a GUI form, and configures BitLocker with the specified PIN. It ensures the PIN meets complexity requirements and logs the process. The script also handles the backup of the BitLocker recovery key to Azure AD.
-
+    The script creates a directory for BitLocker logs, prompts the user to set a BitLocker startup PIN through a GUI form, and configures BitLocker with the specified PIN. It ensures the PIN meets complexity requirements and logs the process.
     A company logo is displayed on the PIN input form. The logo file should be named "Company_logo.png" and placed in the same directory as the script. If the logo file is not found, a warning will be displayed, but the script will continue to execute.
 
 .PARAMETER None
@@ -37,7 +37,7 @@ $Bitlockersettings = "HKLM:\SOFTWARE\Policies\Microsoft\FVE"
 
 # Create log file name with timestamp
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$logFile = Join-Path $logfolder "BitLockerSetup_$timestamp.log"
+$logFile = Join-Path $logfolder "Bitlocker-Setup-PIN_$timestamp.log"
 
 Function Write-Log {
 	param (
@@ -98,28 +98,28 @@ function Show-PinInputForm {
     $label.Text = "Set BitLocker Startup PIN"
     $label.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 20, [System.Drawing.FontStyle]::Regular)
     $label.AutoSize = $true
-    $label.Location = New-Object System.Drawing.Point(20, 100)
+    $label.Location = New-Object System.Drawing.Point(20, 130)
 
     # Instructions
     $instructionLabel = New-Object System.Windows.Forms.Label
     $instructionLabel.Text = "PIN must be at least $minPinLength digits long and not use simple patterns."
     $instructionLabel.Font = New-Object System.Drawing.Font("Segoe UI", 13)
     $instructionLabel.AutoSize = $true
-    $instructionLabel.Location = New-Object System.Drawing.Point(20, 140)
+    $instructionLabel.Location = New-Object System.Drawing.Point(20, 160)
 
     # PIN Input
     $pinInput = New-Object System.Windows.Forms.TextBox
     $pinInput.PasswordChar = "*"
     $pinInput.Font = New-Object System.Drawing.Font("Segoe UI", 12)
     $pinInput.Size = New-Object System.Drawing.Size(300, 25)
-    $pinInput.Location = New-Object System.Drawing.Point(20, 180)
+    $pinInput.Location = New-Object System.Drawing.Point(20, 190)
 
     # PIN Confirmation Input
     $pinConfirmInput = New-Object System.Windows.Forms.TextBox
     $pinConfirmInput.PasswordChar = "*"
     $pinConfirmInput.Font = New-Object System.Drawing.Font("Segoe UI", 12)
     $pinConfirmInput.Size = New-Object System.Drawing.Size(300, 25)
-    $pinConfirmInput.Location = New-Object System.Drawing.Point(20, 220)
+    $pinConfirmInput.Location = New-Object System.Drawing.Point(20, 230)
 
     # Set PIN Button
     $submitButton = New-Object System.Windows.Forms.Button
@@ -142,10 +142,13 @@ function Show-PinInputForm {
     $errorLabel.AutoSize = $true
     $errorLabel.Location = New-Object System.Drawing.Point(20, 300)
 
+    # Add controls to the form
     $form.Controls.AddRange(@($logoBox, $label, $instructionLabel, $pinInput, $pinConfirmInput, $submitButton, $cancelButton, $errorLabel))
 
+    # Set form properties
     $script:pin = $null
 
+    # Event handlers for Submit and Cancel buttons
     $submitButton.Add_Click({
         $enteredPin = $pinInput.Text
         $confirmedPin = $pinConfirmInput.Text
@@ -172,6 +175,7 @@ function Show-PinInputForm {
     $form.Add_Shown({$form.Activate()})
     [void]$form.ShowDialog()
 
+    # Return the entered PIN
     return $script:pin
 }
 
@@ -192,23 +196,26 @@ Try {
 
     # Show PIN input form and get PIN from user
     $userPIN = Show-PinInputForm
-
     Write-Log "User PIN after form: $($userPIN -replace '.', '*')"  # Log masked PIN for security
 
+    # Validate the user input
     if (-not $userPIN) {
         Write-Log "PIN input seems to be empty or invalid."
         throw "PIN input cancelled or invalid. BitLocker not enabled."
     }
 
+    # Convert the user PIN to a SecureString
     Write-Log "Attempting to convert PIN to SecureString"
     $devicePIN = ConvertTo-SecureString $userPIN -AsPlainText -Force
 
+    # Add BitLocker key protector with the provided PIN
     Write-Log "Adding BitLocker with the provided PIN"
     Add-BitlockerKeyProtector -MountPoint $osVolume.MountPoint -TpmAndPinProtector -Pin $devicePIN -ErrorAction Stop
 
     Exit 0
 }
 Catch {
+    # Log the error and display a warning
     $ErrorMessage = $_.Exception.Message
     Write-Log "Error: $ErrorMessage"
     Write-Warning $ErrorMessage
@@ -216,5 +223,6 @@ Catch {
 }
 
 Finally {
+    # Script is completed
     Write-Log "BitLocker setup script completed."
 }
