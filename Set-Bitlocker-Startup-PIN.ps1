@@ -105,42 +105,42 @@ function Show-PinInputForm {
     $instructionLabel.Text = "PIN must be at least $minPinLength digits long and not use simple patterns."
     $instructionLabel.Font = New-Object System.Drawing.Font("Segoe UI", 13)
     $instructionLabel.AutoSize = $true
-    $instructionLabel.Location = New-Object System.Drawing.Point(20, 160)
+    $instructionLabel.Location = New-Object System.Drawing.Point(20, 180)
 
     # PIN Input
     $pinInput = New-Object System.Windows.Forms.TextBox
     $pinInput.PasswordChar = "*"
     $pinInput.Font = New-Object System.Drawing.Font("Segoe UI", 12)
     $pinInput.Size = New-Object System.Drawing.Size(300, 25)
-    $pinInput.Location = New-Object System.Drawing.Point(20, 190)
+    $pinInput.Location = New-Object System.Drawing.Point(20, 210)
 
     # PIN Confirmation Input
     $pinConfirmInput = New-Object System.Windows.Forms.TextBox
     $pinConfirmInput.PasswordChar = "*"
     $pinConfirmInput.Font = New-Object System.Drawing.Font("Segoe UI", 12)
     $pinConfirmInput.Size = New-Object System.Drawing.Size(300, 25)
-    $pinConfirmInput.Location = New-Object System.Drawing.Point(20, 230)
+    $pinConfirmInput.Location = New-Object System.Drawing.Point(20, 240)
 
     # Set PIN Button
     $submitButton = New-Object System.Windows.Forms.Button
     $submitButton.Text = "Set PIN"
     $submitButton.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 12, [System.Drawing.FontStyle]::Regular)
     $submitButton.Size = New-Object System.Drawing.Size(100, 30)
-    $submitButton.Location = New-Object System.Drawing.Point(20, 260)
+    $submitButton.Location = New-Object System.Drawing.Point(20, 280)
 
     #Cancel Button
     $cancelButton = New-Object System.Windows.Forms.Button
     $cancelButton.Text = "Cancel"
     $cancelButton.Font = New-Object System.Drawing.Font("Segoe UI Semibold", 12, [System.Drawing.FontStyle]::Regular)
     $cancelButton.Size = New-Object System.Drawing.Size(100, 30)
-    $cancelButton.Location = New-Object System.Drawing.Point(140, 260)
+    $cancelButton.Location = New-Object System.Drawing.Point(140, 280)
 
     # Error Label
     $errorLabel = New-Object System.Windows.Forms.Label
     $errorLabel.ForeColor = [System.Drawing.Color]::Red
     $errorLabel.Font = New-Object System.Drawing.Font("Segoe UI", 10)
     $errorLabel.AutoSize = $true
-    $errorLabel.Location = New-Object System.Drawing.Point(20, 300)
+    $errorLabel.Location = New-Object System.Drawing.Point(20, 340)
 
     # Add controls to the form
     $form.Controls.AddRange(@($logoBox, $label, $instructionLabel, $pinInput, $pinConfirmInput, $submitButton, $cancelButton, $errorLabel))
