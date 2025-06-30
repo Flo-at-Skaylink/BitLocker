@@ -6,6 +6,7 @@
 .DESCRIPTION
     The script creates a directory for BitLocker logs, prompts the user to set a BitLocker startup PIN through a GUI form, and configures BitLocker with the specified PIN. It ensures the PIN meets complexity requirements and logs the process.
     A company logo is displayed on the PIN input form. The logo file should be named "Company_logo.png" and placed in the same directory as the script. If the logo file is not found, a warning will be displayed, but the script will continue to execute.
+    The script also checks for existing BitLocker settings and handles errors gracefully, logging them to a specified log file.
 
 .PARAMETER None
     This script does not take any parameters.
@@ -17,20 +18,15 @@
 .NOTES
     Author: Florian Aschbichler
     Date: 22.05.2025
-    Version: 1.0
+    Version: 1.1
     This script requires administrative privileges to run.
     Ensure that "Company_logo.png" is available in the script's directory for the logo to be displayed on the form.
 
 #>
 
-# Create Company\BitLocker folder if it doesn't exist
-$bitlockerFolder = "C:\Windows\Temp\BitLocker-Startup-PIN-Tool"
-if (-not (Test-Path $bitlockerFolder)) {
-    New-Item -Path $bitlockerFolder -ItemType Directory -Force | Out-Null
-}
-
 #Log folder
 $logfolder = "C:\ProgramData\Microsoft\IntuneManagementExtension\Logs"
+$bitlockerFolder = "C:\Windows\Temp\BitLocker-Startup-PIN-Tool"
 
 # Registry Path for BitLocker minimum PIN length
 $Bitlockersettings = "HKLM:\SOFTWARE\Policies\Microsoft\FVE"
@@ -180,6 +176,29 @@ function Show-PinInputForm {
 }
 
 Try {
+    # Create Company\BitLocker folder if it doesn't exist
+    if (-not (Test-Path $bitlockerFolder)) {
+        New-Item -Path $bitlockerFolder -ItemType Directory -Force | Out-Null
+    }
+
+    # Check or Create a script running flag, if it exists, exit the script
+    # This prevents multiple instances of the script from running simultaneously
+    # If the run flag is older than 1 day, delete it
+    $scriptRunningFlag = Join-Path $bitlockerFolder "BitLocker-Setup.flag"
+    if (Test-Path $scriptRunningFlag) {
+        $flagCreationTime = (Get-Item $scriptRunningFlag).CreationTime
+        if ($flagCreationTime -lt (Get-Date).AddDays(-1)) {
+            Remove-Item $scriptRunningFlag -Force | Out-Null
+        } else {
+            Write-Log "Script is already running. Exiting to prevent multiple instances."
+            Exit 1
+        }
+    }
+    New-Item -Path $scriptRunningFlag -ItemType File -Force | Out-Null
+
+    # Create log file
+    $logFile = Join-Path $bitlockerFolder "BitLocker-Setup.log"
+    New-Item -Path $logFile -ItemType File -Force | Out-Null
 
     # Read the current minimum PIN length from the registry
     $minPinLength = if (Test-Path $Bitlockersettings) {
@@ -215,6 +234,12 @@ Try {
     Exit 0
 }
 Catch {
+
+    # Delete the script running flag if an error occurs
+    if (Test-Path $scriptRunningFlag) {
+        Remove-Item $scriptRunningFlag -Force | Out-Null
+    }
+
     # Log the error and display a warning
     $ErrorMessage = $_.Exception.Message
     Write-Log "Error: $ErrorMessage"
@@ -223,6 +248,12 @@ Catch {
 }
 
 Finally {
+
+    # Clean up: Delete the script running flag
+    if (Test-Path $scriptRunningFlag) {
+        Remove-Item $scriptRunningFlag -Force | Out-Null
+    }
+
     # Script is completed
     Write-Log "BitLocker setup script completed."
 }
