@@ -26,14 +26,13 @@
 
 #Log folder
 $logfolder = "C:\ProgramData\Microsoft\IntuneManagementExtension\Logs"
-$bitlockerFolder = "C:\Windows\Temp\BitLocker-Startup-PIN-Tool"
 
 # Registry Path for BitLocker minimum PIN length
 $Bitlockersettings = "HKLM:\SOFTWARE\Policies\Microsoft\FVE"
 
 # Create log file name with timestamp
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$logFile = Join-Path $logfolder "Bitlocker-Setup-PIN_$timestamp.log"
+$logFile = Join-Path $logfolder "BitLocker-Startup-PIN_$timestamp.log"
 
 Function Write-Log {
 	param (
@@ -177,28 +176,25 @@ function Show-PinInputForm {
 
 Try {
     # Create Company\BitLocker folder if it doesn't exist
-    if (-not (Test-Path $bitlockerFolder)) {
-        New-Item -Path $bitlockerFolder -ItemType Directory -Force | Out-Null
+    if (-not (Test-Path $logfolder)) {
+        New-Item -Path $logfolder -ItemType Directory -Force | Out-Null
     }
 
     # Check or Create a script running flag, if it exists, exit the script
     # This prevents multiple instances of the script from running simultaneously
     # If the run flag is older than 1 day, delete it
-    $scriptRunningFlag = Join-Path $bitlockerFolder "BitLocker-Setup.flag"
+    $scriptRunningFlag = Join-Path $logfolder "BitLocker-Set-Bitlocker-Startup-PIN.running"
     if (Test-Path $scriptRunningFlag) {
         $flagCreationTime = (Get-Item $scriptRunningFlag).CreationTime
         if ($flagCreationTime -lt (Get-Date).AddDays(-1)) {
             Remove-Item $scriptRunningFlag -Force | Out-Null
+            Write-Log "Old script running flag deleted. Older than 1 day."
         } else {
             Write-Log "Script is already running. Exiting to prevent multiple instances."
             Exit 1
         }
     }
     New-Item -Path $scriptRunningFlag -ItemType File -Force | Out-Null
-
-    # Create log file
-    $logFile = Join-Path $bitlockerFolder "BitLocker-Setup.log"
-    New-Item -Path $logFile -ItemType File -Force | Out-Null
 
     # Read the current minimum PIN length from the registry
     $minPinLength = if (Test-Path $Bitlockersettings) {
