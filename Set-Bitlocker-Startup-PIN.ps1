@@ -30,43 +30,79 @@ $logfolder = "C:\ProgramData\Microsoft\IntuneManagementExtension\Logs"
 # Registry Path for BitLocker minimum PIN length
 $Bitlockersettings = "HKLM:\SOFTWARE\Policies\Microsoft\FVE"
 
-# Create log file name with timestamp
-$timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$logFile = Join-Path $logfolder "BitLocker-Startup-PIN_$timestamp.log"
+# Create log file name
+$logFile = Join-Path $logfolder "Bitlocker-Set-Startup-PIN.log"
 
+# Function to write logs
+# This function logs messages to a specified log file with a timestamp.
 Function Write-Log {
 	param (
 		$message
 	)
+
 	$TimeStamp = "[{0:MM/dd/yy} {0:HH:mm:ss}]" -f (Get-Date)
 	Add-Content $LogFile  "$TimeStamp - $message"
 }
 
+# Function to test PIN complexity
+# This function checks if the provided PIN meets complexity requirements.
+# It checks for sequential numbers, repeated characters, common patterns, and other criteria based on the specified pinComplexity.
+# Returns $true if the PIN is complex enough, otherwise returns $false
 function Test-PinComplex {
-    param([string]$pin)
-    
+    param(
+        [string]$pin,
+        [int]$pinComplexity
+    )
+
     # Check for sequential numbers (including partial sequences)
-    if ($pin -match '01234|12345|23456|34567|45678|56789|67890') { return $false }
+    if ($pinComplexity -eq 0 -and $pin -match '01234|12345|23456|34567|45678|56789|67890') { return $false }
     
     # Check for reverse sequential numbers
-    if ($pin -match '98765|87654|76543|65432|54321|43210') { return $false }
-    
-    # Check for repeated digits (6 or more repetitions)
-    if ($pin -match '(\d)\1{5,}') { return $false }
-    
+    if ($pinComplexity -eq 0 -and $pin -match '98765|87654|76543|65432|54321|43210') { return $false }
+
+    # Check for repeated characters (6 or more repetitions)
+    if ($pin -match '(.)\1{5,}') { return $false }
+
     # Check for common patterns (repeating sequences)
-    if ($pin -match '(\d{3,})\1') { return $false }
+    if ($pin -match '(.{3,})\1') { return $false }
+
+    # Check for patterns with more than 3 repeating characters
+    if ($pin -match '(.)\1{2,}') { return $false }
     
     # Check if all digits are the same
-    if ($pin -match '^(\d)\1*$') { return $false }
+    if ($pin -match '^(.)\1*$') { return $false }
     
     # Check for repeating pairs
-    if ($pin -match '(\d{2})\1+') { return $false }
+    if ($pin -match '(.{2})\1+') { return $false }
+
+    # Check for common keyboard patterns
+    if ($pinComplexity -eq 1 -and $pin -match 'qwerty|asdfgh|zxcvbn') { return $false }
+
+    # Check for spaces or control characters
+    if ($pinComplexity -eq 1 -and $pin -match '\s') { return $false }
+
+    # Check for Username patterns, e.g., first 4 characters of the username
+    if ($pinComplexity -eq 1 -and ($pin.ToLower().Contains($env:USERNAME.ToLower().Substring(0,4)))) { return $false }
+
+    # Check for pinComplexity. Uppercase, lowercase, numbers and special characters
+    if ($pinComplexity -eq 1 -and $pin -notmatch '^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[^\w\d\s])') { return $false }
 
     return $true
 }
 
+# Function to show the PIN input form
+# This function creates a Windows Forms GUI for the user to input their BitLocker startup PIN.
+# It includes fields for entering and confirming the PIN, and checks the PIN against complexity requirements.
+# If the PIN is valid, it returns the entered PIN; otherwise, it displays an error message.
+# The form is maximized and has no borders, with a company logo displayed at the top.
+# The logo file should be named "Company_logo.png" and placed in the same directory as the script.
+# If the logo file is not found, a warning will be displayed, but the script will continue to execute.
 function Show-PinInputForm {
+    param(
+        [int]$pinComplexity,
+        [int]$minPinLength
+    )
+
     Add-Type -AssemblyName System.Windows.Forms
     Add-Type -AssemblyName System.Drawing
 
@@ -148,7 +184,7 @@ function Show-PinInputForm {
         $enteredPin = $pinInput.Text
         $confirmedPin = $pinConfirmInput.Text
         if ($enteredPin.Length -ge $minPinLength -and $enteredPin -match '^\d+$' -and $enteredPin -eq $confirmedPin) {
-            if (Test-PinComplex $enteredPin) {
+            if (Test-PinComplex -pin $enteredPin -pinComplexity $pinComplexity) {
                 $script:pin = $enteredPin
                 Write-Log "PIN set successfully"
                 $form.Close()
@@ -175,6 +211,9 @@ function Show-PinInputForm {
 }
 
 Try {
+
+    Write-Log "Starting BitLocker PIN setup script..."
+
     # Create Company\BitLocker folder if it doesn't exist
     if (-not (Test-Path $logfolder)) {
         New-Item -Path $logfolder -ItemType Directory -Force | Out-Null
@@ -194,7 +233,10 @@ Try {
             Exit 1
         }
     }
+
+    # Create the script running flag
     New-Item -Path $scriptRunningFlag -ItemType File -Force | Out-Null
+    Write-Log "Script running flag created."
 
     # Read the current minimum PIN length from the registry
     $minPinLength = if (Test-Path $Bitlockersettings) {
@@ -205,12 +247,21 @@ Try {
         Write-Log "Registry path for BitLocker settings not found. Using default minimum PIN length: $minPinLength"
     }
 
+    # Read the current Bitlocker PIN complexity settings
+    $pinComplexity = if (Test-Path $Bitlockersettings) {
+        Get-ItemProperty -Path $Bitlockersettings -Name "UseEnhancedPIN" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty UseEnhancedPIN
+        Write-Log "PIN complexity settings read from registry: $pinComplexity"
+    } else {
+        0  # Default complexity if not set
+        Write-Log "Registry path for BitLocker settings not found. Using default PIN complexity: $pinComplexity"
+    }
+
     # Read the current BitLocker status
     Write-Log "Checking BitLocker status..."
     $osVolume = Get-BitLockerVolume | Where-Object { $_.VolumeType -eq 'OperatingSystem' }
 
     # Show PIN input form and get PIN from user
-    $userPIN = Show-PinInputForm
+    $userPIN = Show-PinInputForm -minPinLength $minPinLength -pinComplexity $pinComplexity
     Write-Log "User PIN after form: $($userPIN -replace '.', '*')"  # Log masked PIN for security
 
     # Validate the user input
@@ -229,6 +280,7 @@ Try {
 
     Exit 0
 }
+
 Catch {
 
     # Delete the script running flag if an error occurs
