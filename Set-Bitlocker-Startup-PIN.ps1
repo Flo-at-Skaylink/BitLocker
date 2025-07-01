@@ -183,7 +183,7 @@ function Show-PinInputForm {
     $submitButton.Add_Click({
         $enteredPin = $pinInput.Text
         $confirmedPin = $pinConfirmInput.Text
-        if ($enteredPin.Length -ge $minPinLength -and $enteredPin -match '^\d+$' -and $enteredPin -eq $confirmedPin) {
+        if ($enteredPin.Length -ge $minPinLength -and $enteredPin -eq $confirmedPin) {
             if (Test-PinComplex -pin $enteredPin -pinComplexity $pinComplexity) {
                 $script:pin = $enteredPin
                 Write-Log "PIN set successfully"
