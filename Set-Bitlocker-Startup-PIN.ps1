@@ -241,19 +241,19 @@ Try {
     # Read the current minimum PIN length from the registry
     $minPinLength = if (Test-Path $Bitlockersettings) {
         Get-ItemProperty -Path $Bitlockersettings -Name "MinimumPIN" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty MinimumPIN
-        Write-Log "Minimum PIN length read from registry: $minPinLength"
+        Write-Log "Minimum PIN length found in registry"
     } else {
         8  # Default minimum PIN length if not set
-        Write-Log "Registry path for BitLocker settings not found. Using default minimum PIN length: $minPinLength"
+        Write-Log "Registry path for BitLocker settings not found. Using default minimum PIN length: 8"
     }
 
     # Read the current Bitlocker PIN complexity settings
     $pinComplexity = if (Test-Path $Bitlockersettings) {
         Get-ItemProperty -Path $Bitlockersettings -Name "UseEnhancedPIN" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty UseEnhancedPIN
-        Write-Log "PIN complexity settings read from registry: $pinComplexity"
+        Write-Log "PIN complexity settings found in registry"
     } else {
         0  # Default complexity if not set
-        Write-Log "Registry path for BitLocker settings not found. Using default PIN complexity: $pinComplexity"
+        Write-Log "Registry path for BitLocker settings not found. Using default PIN complexity: 0"
     }
 
     # Read the current BitLocker status
@@ -286,6 +286,7 @@ Catch {
     # Delete the script running flag if an error occurs
     if (Test-Path $scriptRunningFlag) {
         Remove-Item $scriptRunningFlag -Force | Out-Null
+        Write-Log "Script running flag deleted due to error."
     }
 
     # Log the error and display a warning
@@ -300,6 +301,7 @@ Finally {
     # Clean up: Delete the script running flag
     if (Test-Path $scriptRunningFlag) {
         Remove-Item $scriptRunningFlag -Force | Out-Null
+        Write-Log "Script running flag deleted successfully."
     }
 
     # Script is completed
