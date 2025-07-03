@@ -17,8 +17,8 @@
 
 .NOTES
     Author: Florian Aschbichler
-    Date: 22.05.2025
-    Version: 1.1
+    Date: 03.07.2025
+    Version: 1.4
     This script requires administrative privileges to run.
     Ensure that "Company_logo.png" is available in the script's directory for the logo to be displayed on the form.
 
@@ -223,6 +223,8 @@ Try {
     # This prevents multiple instances of the script from running simultaneously
     # If the run flag is older than 1 day, delete it
     $scriptRunningFlag = Join-Path $logfolder "BitLocker-Set-Bitlocker-Startup-PIN.running"
+
+    # Check if the script running flag exists and delete it if its older than 1 day
     if (Test-Path $scriptRunningFlag) {
         $flagCreationTime = (Get-Item $scriptRunningFlag).CreationTime
         if ($flagCreationTime -lt (Get-Date).AddDays(-1)) {
