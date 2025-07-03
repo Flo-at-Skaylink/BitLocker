@@ -1,0 +1,24 @@
+{
+"Rules": [
+    {
+        "SettingName": "CheckBitLockerPIN",
+        "Operator": "IsEquals",
+        "DataType": "String",
+        "Operand": "TpmPin",
+        "MoreInfoUrl": "https://contoso.com/remediation",
+        "RemediationStrings": [
+            {
+                "Language": "en_US",
+                "Title": "Enable BitLocker with TPM+PIN",
+                "Description": "Your device must have BitLocker enabled with a TPM and PIN to be compliant."
+            },
+            {
+                "Language": "de_DE",
+                "Title": "BitLocker mit TPM+PIN aktivieren",
+                "Description": "Ihr Gerät muss mit BitLocker aktiviert sein, um konform zu sein. Es muss ein TPM und eine PIN vorhanden sein."
+            }
+        ]
+    }
+
+  ]
+}
